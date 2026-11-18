@@ -1,0 +1,10 @@
+# downloaded market data (re-create with data/fetch_binance.py)
+data/cache/*
+!data/cache/.gitkeep
+
+__pycache__/
+*.pyc
+.venv/
+
+# python bytecode caches anywhere
+**/__pycache__/
