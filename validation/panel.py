@@ -42,14 +42,19 @@ def load_real():
     f = _read("binance_BTCUSDT_funding.parquet")
     if f is not None:
         # settlement times carry a few ms of jitter: floor to the hour; the rate settled at t is known from t on
-        s = f.set_index(pd.to_datetime(f["funding_time"], unit="ms", utc=True).dt.floor("H"))["funding_rate"]
+        s = f.set_index(pd.to_datetime(f["funding_time"], unit="ms", utc=True).dt.floor(pd.Timedelta(hours=1)))["funding_rate"]
         s = s[~s.index.duplicated(keep="last")]
         p["funding"] = s.reindex(p.index.union(s.index)).ffill().reindex(p.index)
 
-    iv = _read("deribit_BTC_iv_surface_1h.parquet")
-    if iv is not None:
-        cols = [c for c in iv.columns if c.split("_")[0] in ("atm", "rr25", "bf25", "rr10", "bf10")]
-        s = iv.set_index(pd.to_datetime(iv["timestamp"], unit="ms", utc=True))[cols]
+    # IV surface: from the full hourly option chain (shared read-only dataset, data/build_iv_surface_chain.py);
+    # hours the chain does not cover (after its end, rare gaps) come from the trade-based surface
+    # (data/build_iv_surface.py). The two agree within ~0.2 vol points ATM / ~0.1 RR25 on common hours.
+    srcs = [s for s in (_read("deribit_BTC_iv_surface_chain_1h.parquet"), _read("deribit_BTC_iv_surface_1h.parquet"))
+            if s is not None]
+    if srcs:
+        cols = [c for c in srcs[0].columns if c.split("_")[0] in ("atm", "rr25", "bf25", "rr10", "bf10")]
+        s = pd.concat([x.set_index(pd.to_datetime(x["timestamp"], unit="ms", utc=True))[cols] for x in srcs])
+        s = s[~s.index.duplicated(keep="first")].sort_index()
         p = p.join(s, how="left")
 
     dv = _read("deribit_BTC_dvol_1h.parquet")

@@ -6,12 +6,12 @@
   "end": "2022-12-31 23:00:00+00:00",
   "n_hours": 8760
  },
- "built": "2026-11-19 06:58 UTC",
- "code_commit": "816889e",
- "fit_seconds": 14.9,
+ "built": "2026-11-19 16:04 UTC",
+ "code_commit": "1107ae4",
+ "fit_seconds": 13.7,
  "structural": {
   "annual_vol_unconditional": 0.6384,
-  "persistence": 0.96971,
+  "persistence": 0.96989,
   "start_vol_presets_calm_normal_stressed": [
    0.4308,
    0.6518,
@@ -31,26 +31,26 @@
    "oi_change_per_year": 0.34281771627365293,
    "funding_mean": 3.803584474885845e-05,
    "funding_share_at_base": 0.30776255707762556,
-   "atm30_mean": 0.6561565922345541,
-   "vrp30_mean": 0.03593280049268913,
-   "rr25_30d_mean": -0.08531706524225853,
-   "bf25_30d_mean": 0.02346334583135002,
-   "term_slope_7_90_mean": -0.016632607231367204
+   "atm30_mean": 0.6503527541743852,
+   "vrp30_mean": 0.033317930014843095,
+   "rr25_30d_mean": -0.08412074125621583,
+   "bf25_30d_mean": 0.023070427149117567,
+   "term_slope_7_90_mean": -0.023709151097764048
   },
   "synthetic_median_3_paths": {
-   "ann_vol": 0.48056797574967475,
-   "hourly_exkurt": 16.82160186159013,
-   "acf_absr_1h": 0.23198979502616202,
-   "log_return_per_year": -1.026224234549204,
-   "volume_median": 14659.004062520671,
-   "oi_change_per_year": 0.029877034594314192,
-   "funding_mean": 3.67105514682824e-05,
-   "funding_share_at_base": 0.22100456621004566,
-   "atm30_mean": 0.5503218570899853,
-   "vrp30_mean": 0.08366186857776509,
-   "rr25_30d_mean": -0.07891796594291126,
-   "bf25_30d_mean": 0.026117394675676035,
-   "term_slope_7_90_mean": -0.06163766670471716
+   "ann_vol": 0.4450404646887931,
+   "hourly_exkurt": 13.14912839066905,
+   "acf_absr_1h": 0.23553206239926008,
+   "log_return_per_year": -0.868824736669655,
+   "volume_median": 11686.565199763172,
+   "oi_change_per_year": 0.1933728405141306,
+   "funding_mean": 3.710915607934079e-05,
+   "funding_share_at_base": 0.2328767123287671,
+   "atm30_mean": 0.522745620166071,
+   "vrp30_mean": 0.09203357167294658,
+   "rr25_30d_mean": -0.07888760314003444,
+   "bf25_30d_mean": 0.025129845946253903,
+   "term_slope_7_90_mean": -0.0668147871281704
   }
  },
  "usage": "models.load_card('2022').generate(n_hours, seed=..., start=...)"

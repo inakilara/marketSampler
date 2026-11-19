@@ -123,8 +123,8 @@ models.load_card("all", options=False)   # price / funding / OI only
 
 A year card reproduces that year's regime (vol level, drift of funding, skew sign...). Note the year cards are
 fitted on ~8,760 hours (the 90-day volatility component uses the first 2,160 as burn-in), so they are noisier
-than `all`; the `all` card is the one validated with `validation/compare.py` (129 PASS / 21 NEAR / 1 FAIL of 151
-facts). Starting price / OI / funding default to the end of the card's period.
+than `all`; the `all` card is the one validated with `validation/compare.py` (125–129 PASS of 151 facts over
+seeds; see models/README.md). Starting price / OI / funding default to the end of the card's period.
 
 Check table (statistics of the real period vs the median of %d synthetic paths of the same length from the card):
 
@@ -132,7 +132,7 @@ Check table (statistics of the real period vs the median of %d synthetic paths o
 
 Each folder: `structural_state.npz`, `options_state.npz` (fitted states; residual tables stored as float32),
 `structural.json`, `options.json` (readable parameters), `card.json` (metadata + full check table).
-Rebuild after refreshing the data: `python cards/build_cards.py` (~2 min per card).
+Rebuild after refreshing the data: `python cards/build_cards.py` (~2 min total), using the project venv.
 """ % (N_CHECK_PATHS, "\n".join(rows))
     open(os.path.join(HERE, "README.md"), "w", encoding="utf-8").write(text)
 

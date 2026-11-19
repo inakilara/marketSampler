@@ -6,9 +6,9 @@
   "end": "2026-11-18 18:00:00+00:00",
   "n_hours": 42787
  },
- "built": "2026-11-19 06:57 UTC",
- "code_commit": "816889e",
- "fit_seconds": 70.4,
+ "built": "2026-11-19 16:03 UTC",
+ "code_commit": "1107ae4",
+ "fit_seconds": 48.1,
  "structural": {
   "annual_vol_unconditional": 0.5067,
   "persistence": 0.95544,
@@ -23,34 +23,34 @@
  },
  "check": {
   "real": {
-   "ann_vol": 0.5004483840878579,
+   "ann_vol": 0.500448384087858,
    "hourly_exkurt": 13.845353578120942,
-   "acf_absr_1h": 0.28198699414514766,
+   "acf_absr_1h": 0.2819869941451477,
    "log_return_per_year": 0.062021820249754306,
    "volume_median": 7603.736999999999,
    "oi_change_per_year": 0.05089654298130433,
    "funding_mean": 5.993823331463826e-05,
    "funding_share_at_base": 0.2796784445690783,
-   "atm30_mean": 0.5067267236617055,
-   "vrp30_mean": 0.029238147703454963,
-   "rr25_30d_mean": -0.022890676263929034,
-   "bf25_30d_mean": 0.016475417483210235,
-   "term_slope_7_90_mean": -0.039148652429884155
+   "atm30_mean": 0.5044707242143558,
+   "vrp30_mean": 0.027131217709097086,
+   "rr25_30d_mean": -0.02247195517827469,
+   "bf25_30d_mean": 0.016285356680387303,
+   "term_slope_7_90_mean": -0.041222045413605996
   },
   "synthetic_median_3_paths": {
-   "ann_vol": 0.41612832157521024,
-   "hourly_exkurt": 33.50343114911658,
-   "acf_absr_1h": 0.2886778178753906,
-   "log_return_per_year": 0.23736386390829636,
-   "volume_median": 5745.89403131474,
-   "oi_change_per_year": 0.05637663032726202,
-   "funding_mean": 5.757496556418956e-05,
-   "funding_share_at_base": 0.3322116283417461,
-   "atm30_mean": 0.4339564314942003,
-   "vrp30_mean": 0.03007388013987985,
-   "rr25_30d_mean": -0.008582271289615724,
-   "bf25_30d_mean": 0.014772645587504579,
-   "term_slope_7_90_mean": -0.034092989036419954
+   "ann_vol": 0.4353720653046128,
+   "hourly_exkurt": 51.463233042862996,
+   "acf_absr_1h": 0.2820921258162968,
+   "log_return_per_year": -0.049101293573278706,
+   "volume_median": 6262.527439336194,
+   "oi_change_per_year": 0.023628046668684028,
+   "funding_mean": 5.586750183802164e-05,
+   "funding_share_at_base": 0.30061693774537296,
+   "atm30_mean": 0.42376931800718554,
+   "vrp30_mean": 0.01961105548369934,
+   "rr25_30d_mean": -0.014287456372310218,
+   "bf25_30d_mean": 0.015543434858360145,
+   "term_slope_7_90_mean": -0.03885981904628902
   }
  },
  "usage": "models.load_card('all').generate(n_hours, seed=..., start=...)"

@@ -32,9 +32,9 @@ Sample: 2022-01-01 → 2026-11-18, 42787 hourly bars. Values: pooled (range acro
 - corr with trailing 24h / 168h return 0.160 (years: -0.003 … 0.266) / 0.293 (years: 0.088 … 0.364); with next 24h return -0.032 (years: -0.141 … 0.006)
 
 ## Options (Deribit constant-maturity IV)
-- 30d ATM mean 0.507 (years: 0.402 … 0.656); VRP (ATM30 − next-30d RV) mean 0.029 (years: -0.011 … 0.046), positive 0.65 (years: 0.52 … 0.73) of the time
-- spot–vol: corr(r, ΔATM30) -0.127 (years: -0.326 … 0.100), beta -0.170 (years: -0.468 … 0.161); corr(r, ΔRR25_30d) 0.292 (years: 0.239 … 0.384); corr(r, ΔBF25_30d) -0.068 (years: -0.104 … -0.030)
-- RR25_30d mean -0.023 (years: -0.085 … 0.015), positive 0.37 (years: 0.02 … 0.72) of time, corr with trailing 7d return 0.472 (years: 0.417 … 0.555)
-- term slope ATM7 − ATM90 mean -0.039 (years: -0.061 … -0.008), inverted 0.23 (years: 0.15 … 0.37) of time, corr with trailing 24h RV 0.494 (years: 0.381 … 0.668); ATM30 half-life 27.1 (years: 6.3 … 25.9) days
+- 30d ATM mean 0.504 (years: 0.400 … 0.650); VRP (ATM30 − next-30d RV) mean 0.027 (years: -0.013 … 0.045), positive 0.65 (years: 0.51 … 0.73) of the time
+- spot–vol: corr(r, ΔATM30) -0.249 (years: -0.503 … 0.135), beta -0.261 (years: -0.607 … 0.153); corr(r, ΔRR25_30d) 0.272 (years: 0.194 … 0.359); corr(r, ΔBF25_30d) -0.095 (years: -0.146 … -0.038)
+- RR25_30d mean -0.022 (years: -0.084 … 0.015), positive 0.37 (years: 0.01 … 0.72) of time, corr with trailing 7d return 0.471 (years: 0.422 … 0.572)
+- term slope ATM7 − ATM90 mean -0.041 (years: -0.062 … -0.011), inverted 0.21 (years: 0.14 … 0.35) of time, corr with trailing 24h RV 0.491 (years: 0.376 … 0.672); ATM30 half-life 30.0 (years: 7.1 … 28.0) days
 
 Full table: `fingerprint.csv`; curves: `curves/`; plots: `figures/`.

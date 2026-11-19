@@ -45,6 +45,21 @@ Deribit publishes no historical snapshots of the full chain, so the hourly chain
 Limits: the chain is **sparse** — only strikes that traded in a given hour appear, and `last_iv` is the IV of the
 last trade (not the mark IV). Option prices are in BTC (multiply by `index_price` for USD).
 
+## Full hourly option chain (shared, read-only)
+
+`C:\ClaudeSandbox\shared-data\option-chain\option_chain_hourly.parquet` holds every listed BTC option every hour
+(2019-11-25 → 2026-10-25, ~39M rows) with Deribit's mark IV and the expiry's forward. It is shared by all
+projects: **read it in place, never modify it or write into that folder.**
+
+```
+python data/build_iv_surface_chain.py --check    # -> cache/deribit_BTC_iv_surface_chain_1h.parquet (~7 min)
+```
+
+Same columns as `deribit_BTC_iv_surface_1h.parquet` (atm / rr25 / bf25 / rr10 / bf10 at 7–180 d), built from all
+OTM strikes' mark IVs instead of recent trades. `validation/panel.py` uses it and falls back to the trade-based
+surface only for hours it does not cover (after 2026-10-25). On the 42,199 common hours the two agree within ~0.2
+vol points ATM (corr 0.999) and ~0.1 RR25; BF agrees less closely (corr ~0.82), as expected from sparse trades.
+
 If pip/requests fail with `CERTIFICATE_VERIFY_FAILED` on this machine, the scripts use the stdlib `ssl`
 (OS certificate store); for pip, export the Windows root store to a PEM file and pass `--cert <file>`.
 Note: the REST open-interest endpoint only serves the last 30 days, which is why history comes from the archive.

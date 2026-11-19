@@ -129,14 +129,16 @@ Per series (log ATM; RR/ATM and BF/ATM; 30d modelled directly, other tenors as s
 Shocks are resampled jointly across the 30 series from real residual rows (slow: daily rows; medium + noise:
 the same real hour), so tenors and quantities co-move as in the data.
 
-Score (`python validation/compare.py --model structural+options`, all 151 facts): **129 PASS, 21 NEAR, 1 FAIL**;
-options 18 / 5 / 0, the OHLCV / funding / OI part unchanged. Checked by hand: driven by the *real* price path the
+Score (`python validation/compare.py --model structural+options`, all 151 facts): **125–129 PASS, 20–25 NEAR,
+0–2 FAIL** over seeds 0–3 (seed 0: 125 / 25 / 1; options 19 / 4 / 0). Since 2026-11-19 the real surface comes from the
+full hourly option chain (`data/build_iv_surface_chain.py`) and the code runs in the Python 3.12 venv; before that
+(trade-based surface, Python 3.8) seed 0 gave 129 / 21 / 1. Structural alone: 92–95 PASS over the same seeds. Checked by hand: driven by the *real* price path the
 layer reproduces the real options facts (ATM30 mean 0.50 vs 0.51, VRP +2.4 vs +2.9 vol, RR25 beta 0.49 vs 0.48,
 ATM30 daily ACF at 30 d 0.63 vs 0.73); no calendar-arbitrage violations; negative BF25 2.2 % of hours (real
 reconstruction 1.1 %). `python models/plot_options.py` → `validation/reports/structural+options/figures/surface_paths.png`.
 
-Known gaps: same-hour corr(dATM30, dBF25) −0.35 vs −0.49…−0.60 (mostly a reconstruction artefact: BF = wings − ATM
-shares ATM's measurement error); crash-time term-structure inversions are milder than real (7d − 90d peaks
+Known gaps: same-hour corr(dlogvolume, dATM30) 0.08 vs 0.12…0.20 on the chain surface (the FAIL at seed 0);
+crash-time term-structure inversions are milder than real (7d − 90d peaks
 ~+10 vol vs +20…45); the real BF10 downtrend over 2022–2026 is not reproduced (stationary model).
 Scenario knobs: `atm_shift` (log ATM level, e.g. 0.1 = +10 %), `rr_shift` (RR/ATM level), plus every price-path
 scenario (vol, jumps, drift...) which the surface follows.

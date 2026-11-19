@@ -68,6 +68,8 @@ def score(real, chunks, pooled):
         med = sc.median() if len(sc) else np.nan
         if np.isfinite(lo) and np.isfinite(hi) and np.isfinite(med):
             w = max(hi - lo, 1e-12)
+            eps = 1e-9 * max(1.0, abs(lo), abs(hi))  # float ties (e.g. constants of the facts) count as inside
+            lo, hi = lo - eps, hi + eps
             if lo <= med <= hi:
                 status = "PASS"
             elif lo - 0.5 * w <= med <= hi + 0.5 * w:

@@ -8,7 +8,7 @@ def hour_of_week(index):
 
 
 def hourly_index(start, n):
-    return pd.date_range(pd.Timestamp(start, tz="UTC"), periods=n, freq="H", name="time")
+    return pd.date_range(pd.Timestamp(start, tz="UTC"), periods=n, freq=pd.Timedelta(hours=1), name="time")
 
 
 def seasonal_profile(values, how, smooth=1):

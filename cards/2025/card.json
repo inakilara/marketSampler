@@ -6,12 +6,12 @@
   "end": "2025-12-31 23:00:00+00:00",
   "n_hours": 8760
  },
- "built": "2026-11-19 06:59 UTC",
- "code_commit": "816889e",
- "fit_seconds": 13.5,
+ "built": "2026-11-19 16:04 UTC",
+ "code_commit": "1107ae4",
+ "fit_seconds": 12.8,
  "structural": {
   "annual_vol_unconditional": 0.4392,
-  "persistence": 0.82916,
+  "persistence": 0.82942,
   "start_vol_presets_calm_normal_stressed": [
    0.3048,
    0.4037,
@@ -24,33 +24,33 @@
  "check": {
   "real": {
    "ann_vol": 0.4441928178963015,
-   "hourly_exkurt": 12.511931910095957,
+   "hourly_exkurt": 12.511931910095962,
    "acf_absr_1h": 0.2671608999098129,
    "log_return_per_year": -0.07434016828761916,
    "volume_median": 4688.0975,
    "oi_change_per_year": 0.03149443329072694,
    "funding_mean": 4.681669406392694e-05,
    "funding_share_at_base": 0.17168949771689498,
-   "atm30_mean": 0.4429230359130116,
-   "vrp30_mean": 0.015185900461141514,
-   "rr25_30d_mean": -0.012864261877679443,
-   "bf25_30d_mean": 0.011811291647615242,
-   "term_slope_7_90_mean": -0.04302507964937217
+   "atm30_mean": 0.4415536239393534,
+   "vrp30_mean": 0.013957521761455396,
+   "rr25_30d_mean": -0.012338141147396519,
+   "bf25_30d_mean": 0.011801182762044653,
+   "term_slope_7_90_mean": -0.04442253447841469
   },
   "synthetic_median_3_paths": {
-   "ann_vol": 0.4135531916064493,
-   "hourly_exkurt": 13.291395172349945,
-   "acf_absr_1h": 0.27238322637869883,
-   "log_return_per_year": -0.43916763167299155,
-   "volume_median": 4683.738991646516,
-   "oi_change_per_year": -0.19418870380442566,
-   "funding_mean": 3.8394432187243837e-05,
-   "funding_share_at_base": 0.039269406392694065,
-   "atm30_mean": 0.42340004780892365,
-   "vrp30_mean": 0.013550703471515713,
-   "rr25_30d_mean": -0.024177645665339757,
-   "bf25_30d_mean": 0.012243575549892775,
-   "term_slope_7_90_mean": -0.038821658046645696
+   "ann_vol": 0.4332607567069826,
+   "hourly_exkurt": 11.536968532365652,
+   "acf_absr_1h": 0.2596524831222265,
+   "log_return_per_year": -0.4860186233561004,
+   "volume_median": 4895.718121573927,
+   "oi_change_per_year": -0.11365928580398453,
+   "funding_mean": 3.572024439488455e-05,
+   "funding_share_at_base": 0.06575342465753424,
+   "atm30_mean": 0.4264821204373979,
+   "vrp30_mean": 0.004082908409429026,
+   "rr25_30d_mean": -0.0211717396358058,
+   "bf25_30d_mean": 0.011955631798492562,
+   "term_slope_7_90_mean": -0.04051122900589437
   }
  },
  "usage": "models.load_card('2025').generate(n_hours, seed=..., start=...)"
