@@ -168,7 +168,7 @@ def run(model_name, n_paths=3, groups=None, seed0=0, refit=False):
     m = models.load(model_name, refit=refit, panel=real_p)
     n = len(real_p)
     paths = [m.generate(n, seed=seed0 + k) for k in range(n_paths)]
-    groups = groups or NO_OPTIONS
+    groups = groups or (list(facts.ALL) if model_name.endswith("+options") else NO_OPTIONS)
     chunks, pooled, res = characterise_paths(paths, groups)
     real = real_fingerprint()
     real = real[real.index.map(lambda k: k.split(".")[0] in groups)]

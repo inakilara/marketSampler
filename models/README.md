@@ -105,6 +105,42 @@ realises ~0.77 of it (same as real: pooled 0.50, typical year lower).
 `python models/plot_scenarios.py` plots every scenario against the baseline
 (`validation/reports/structural/figures/scenarios.png`).
 
+## Options layer (`models/options.py`)
+
+Hourly constant-maturity IV surface: ATM, RR25, BF25, RR10, BF10 at 7 / 14 / 30 / 60 / 90 / 180 days (the columns of
+`data/cache/deribit_BTC_iv_surface_1h.parquet`). It is a function of the price path only (returns, funding), so
+it attaches to the structural generator, the bootstrap, or real history.
+
+```python
+m = models.load("structural+options")                     # both saved states
+path = m.generate(24 * 365, seed=1, start_vol="stressed", atm_shift=0.1)   # + atm_*, rr25_*, ... columns
+surf = models.load("options").generate(real_or_synthetic_path, seed=1)     # surface for any path
+```
+
+Per series (log ATM; RR/ATM and BF/ATM; 30d modelled directly, other tenors as spreads to 30d):
+
+| component | what it carries | fitted on |
+|---|---|---|
+| long-run level `a + β'F_t` | F = log realised vol over 1 d / 1 w / 30 d / 90 d, trailing 1 w / 30 d return, \|1 w return\|, funding: variance risk premium, skew follows price, short tenors track recent RV | hourly OLS |
+| slow deviation (half-life ≤ 6 months) + medium deviation (days) | month-long skew / butterfly regimes; persistent spot-vol and skew response to the bar return | daily ACF up to 60 d + daily regression on the day's returns |
+| fast transient (hours) | same-hour overshoot: 30d RR25 moves 0.8 × the bar return within the hour, ~0.4 stays | hourly impulse response |
+| measurement noise | the reconstructed surface's hourly noise (10–90 % of hourly RR/BF changes), so synthetic surfaces are "measured" like the real one | hourly change variance |
+
+Shocks are resampled jointly across the 30 series from real residual rows (slow: daily rows; medium + noise:
+the same real hour), so tenors and quantities co-move as in the data.
+
+Score (`python validation/compare.py --model structural+options`, all 151 facts): **130 PASS, 20 NEAR, 1 FAIL**;
+options 19 / 4 / 0, the OHLCV / funding / OI part unchanged. Checked by hand: driven by the *real* price path the
+layer reproduces the real options facts (ATM30 mean 0.50 vs 0.51, VRP +2.4 vs +2.9 vol, RR25 beta 0.49 vs 0.48,
+ATM30 daily ACF at 30 d 0.63 vs 0.73); no calendar-arbitrage violations; negative BF25 2.2 % of hours (real
+reconstruction 1.1 %). `python models/plot_options.py` → `validation/reports/structural+options/figures/surface_paths.png`.
+
+Known gaps: same-hour corr(dATM30, dBF25) −0.35 vs −0.49…−0.60 (mostly a reconstruction artefact: BF = wings − ATM
+shares ATM's measurement error); crash-time term-structure inversions are milder than real (7d − 90d peaks
+~+10 vol vs +20…45); the real BF10 downtrend over 2022–2026 is not reproduced (stationary model).
+Scenario knobs: `atm_shift` (log ATM level, e.g. 0.1 = +10 %), `rr_shift` (RR/ATM level), plus every price-path
+scenario (vol, jumps, drift...) which the surface follows.
+
 ## Implementation plan
 
 | step | content | validated by |

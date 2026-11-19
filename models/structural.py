@@ -359,6 +359,8 @@ class StructuralModel:
             past_season = self.season[hour_of_week(idx[0] - pd.to_timedelta(np.arange(720, 0, -1), "h"))]
             rv = np.sqrt(HOURS_YEAR * np.mean((past_season * hist[H - 720:H]) ** 2))
             hist[:H] *= start_vol / rv
+        past_how = hour_of_week(idx[0] - pd.to_timedelta(np.arange(H, 0, -1), "h"))
+        r_pre = self.mu + self.season[past_how] * hist[:H]  # returns before the start (burn-in for other layers)
         x2 = hist * hist
         sums = np.array([x2[H - k:H].sum() for k in comps])
         b, g = self.b, self.g
@@ -454,7 +456,7 @@ class StructuralModel:
         out["taker_buy_volume"] = vol * tb
         out["oi"] = oi
         out["funding"] = fund
-        self.last_state = {"sigma": sig, "z": Z, "season": self.season[how]}
+        self.last_state = {"sigma": sig, "z": Z, "season": self.season[how], "r_pre": r_pre}
         return out
 
     # ================================================================== params

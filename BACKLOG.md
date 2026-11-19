@@ -25,9 +25,12 @@
 - [x] 6. scenarios on `generate()` (vol_level path, start_vol presets, vol_mult, drift, jumps, funding_shift,
       funding0) and `models.load()` with a saved state (0.2 s instead of refitting); baseline unchanged 96/14/0
 - [ ] optional hidden-regime layer for the remaining NEARs (calm typical year, short funding bull episodes)
-- [ ] options layer on the latent vol state (after the IV surface build)
+- [x] options layer (`models/options.py`): hourly ATM / RR / BF surface at 7–180 d driven by the price path;
+      `models.load("structural+options")` = joint generator; 130 PASS / 20 NEAR / 1 FAIL of 151 facts
+- [ ] options gaps: crash-time term-structure inversions too mild; same-hour dATM–dBF correlation (FAIL, mostly
+      reconstruction artefact); BF10 downtrend not reproduced
 
 ## Later
-- [ ] Joint synthetic generator (OHLCV + funding + OI + IV surface state)
+- [x] Joint synthetic generator (OHLCV + funding + OI + IV surface state)
 - [ ] Chain reconstruction from ATM/RR/BF + forward curve, with no-arbitrage checks
 - [ ] Production data source: Amberdata (constant-maturity delta surfaces)
