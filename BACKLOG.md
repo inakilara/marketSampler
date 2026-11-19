@@ -22,8 +22,9 @@
 - [x] 4. open interest
 - [x] 5. funding (one-sided dead band, trend drivers, feedback on returns)
       -> structural: 96 PASS / 14 NEAR / 0 FAIL of 110 facts (bootstrap benchmark 100 / 5 / 5)
-- [ ] 6. scenarios on top of `generate()` (force vol level / regime, drift, funding stress), save/load fitted
-      model without refitting (fit takes ~2.5 min), optional hidden-regime layer for the remaining NEARs
+- [x] 6. scenarios on `generate()` (vol_level path, start_vol presets, vol_mult, drift, jumps, funding_shift,
+      funding0) and `models.load()` with a saved state (0.2 s instead of refitting); baseline unchanged 96/14/0
+- [ ] optional hidden-regime layer for the remaining NEARs (calm typical year, short funding bull episodes)
 - [ ] options layer on the latent vol state (after the IV surface build)
 
 ## Later

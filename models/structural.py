@@ -23,6 +23,19 @@ Layers (each conditioned on the ones above; all fitted on the real panel by fit(
 Innovations: filtered historical simulation. The residuals of layers 1, 3 and 4 for the same real hour are
 resampled together (stationary bootstrap, mean block 24 h), so same-bar cross-dependence and empirical tails
 are kept; funding residuals are resampled per settlement.
+
+Scenarios (keyword arguments of generate(); every "path" argument is a scalar or an array of n_hours values):
+  vol_level     long-run annualised volatility (rescales the variance-targeting constant w)
+  start_vol     annualised volatility of the 90-day history the path starts from, or "calm" / "normal" /
+                "stressed" (10th / 50th / 90th percentile of real 30-day realised vol)
+  vol_mult      multiplier on the conditional volatility per hour (e.g. a stress window); it feeds the cascade,
+                so a stressed episode raises the volatility that follows it, as in real data
+  drift         annualised log drift (replaces the fitted mean return)
+  jumps         {hour offset or timestamp: log return} forced bars (crash / squeeze); volume, OI, funding and
+                the later volatility react to them through the model
+  funding_shift shift of the long-run latent funding premium per 8 h (e.g. 3e-4 = +0.03 % per settlement)
+  funding0      funding rate at the start
+  p0, oi0       starting price and open interest
 """
 import json
 import os
@@ -40,6 +53,30 @@ T_DF = 6.0
 # funding dead band: base rate I and band width c above it. c is not observable directly; 1e-4 was chosen by
 # simulation (share pinned at the base: c=5e-5 0.18, 1e-4 0.29, 2e-4 0.41, 5e-4 0.55; real 0.28)
 FUND_I, FUND_C = 1e-4, 1e-4
+HOURS_YEAR = 8766
+JUMP_Z = 8.0  # cap on the shock a forced jump passes to volume / OI / intrabar / the volatility cascade
+STATE_FILE = "structural_state.npz"
+# fitted attributes stored by save_state(): arrays go to the npz, scalars/lists to a JSON header
+_STATE_ARRAYS = ("season", "x_hist", "season_lv", "vol_beta", "eta_beta", "eta_hist", "tb_beta", "oi_beta", "J",
+                 "fund_beta", "fund_resid", "P_hist", "b", "rv_quantiles")
+_STATE_SCALARS = ("mu", "p0", "oi_mean", "oi0", "f_mean", "delta", "w", "w_qml", "g", "persistence", "x_var",
+                  "kappa", "theta", "iscale_norm", "intrabar_fit", "fit_info", "data_end", "resid_block")
+
+
+def _as_path(v, n, name):
+    a = np.broadcast_to(np.asarray(v, float), (n,)) if np.ndim(v) == 0 else np.asarray(v, float)
+    if len(a) != n:
+        raise ValueError("%s must be a scalar or have n_hours=%d values (got %d)" % (name, n, len(a)))
+    return a
+
+
+def premium_from_funding(F):
+    """A latent premium that maps to funding F (inverse of the dead band; mid-band for the base rate)."""
+    if F < FUND_I - 1e-12:
+        return F
+    if F <= FUND_I + 1e-12:
+        return FUND_I + 0.5 * FUND_C
+    return F + FUND_C
 
 
 def rolling_means_lagged(x2, comps):
@@ -120,6 +157,10 @@ class StructuralModel:
         sbar = self.season[how] * sigma
         self.p0 = float(p["close"].iloc[-1])
         self.x_hist = x
+        self.x_var = float(np.mean(x * x))
+        self.data_end = str(idx[-1])
+        rv30 = pd.Series(r).rolling(720).std().dropna() * np.sqrt(HOURS_YEAR)
+        self.rv_quantiles = rv30.quantile([.1, .5, .9]).values  # calm / normal / stressed start presets
         # ---- 2. intrabar
         # ---- 3. volume and taker flow
         lv = np.log(P["volume"].values)
@@ -275,25 +316,54 @@ class StructuralModel:
         self.fit_info["funding_censored_share"] = float(cens.mean())
 
     # ================================================================== generate
-    def generate(self, n_hours, seed=0, start="2030-01-07", p0=None, oi0=None):
+    def annual_vol(self):
+        """Unconditional annualised volatility implied by the fitted returns core."""
+        return float(np.sqrt(HOURS_YEAR * np.mean(self.season ** 2) * self.w / (1 - self.persistence)))
+
+    def generate(self, n_hours, seed=0, start="2030-01-07", p0=None, oi0=None, vol_level=None, start_vol=None,
+                 vol_mult=None, drift=None, jumps=None, funding_shift=None, funding0=None):
+        """Hourly synthetic panel (open high low close volume taker_buy_volume oi funding). Scenario arguments:
+        see the module docstring. With none of them, the path is a draw from the fitted model."""
         rng = np.random.default_rng(seed)
         idx = hourly_index(start, n_hours)
         how = hour_of_week(idx)
         comps = np.array(self.components)
         H = int(comps.max())
+        season_t = self.season[how]
+        # ---- scenario inputs
+        # long-run level: variance targeting at the requested level (a path makes a slow regime change: the
+        # cascade drifts towards the new level with its own long memory)
+        lev = _as_path(self.annual_vol() if vol_level is None else vol_level, n_hours, "vol_level") / self.annual_vol()
+        w_t = self.w * lev ** 2
+        mult = _as_path(1.0 if vol_mult is None else vol_mult, n_hours, "vol_mult")
+        mu_t = _as_path(self.mu if drift is None else drift / HOURS_YEAR, n_hours, "drift")
+        fshift = _as_path(0.0 if funding_shift is None else funding_shift, n_hours, "funding_shift")
+        forced = np.full(n_hours, np.nan)
+        for when, ret in (jumps or {}).items():
+            if isinstance(when, (int, np.integer)):
+                t = int(when)
+            else:
+                ts = pd.Timestamp(when)
+                t = int(idx.get_loc(ts.tz_localize("UTC") if ts.tz is None else ts))
+            forced[t] = ret
         # ---- joint innovations
         ji = stationary_bootstrap_indices(n_hours, len(self.J), self.resid_block, rng)
-        Z, EV, ETB, EOI = self.J[ji].T
+        Z, EV, ETB, EOI = self.J[ji].T.copy()
         # ---- 1 + 4 + 5. returns, open interest and funding stepped together (funding feeds back on returns)
         j0 = rng.integers(0, len(self.x_hist) - H)
         hist = np.empty(H + n_hours)
-        hist[:H] = self.x_hist[j0:j0 + H]
+        hist[:H] = self.x_hist[j0:j0 + H] * lev[0]  # a requested level also applies to the starting history
+        if start_vol is not None:  # rescale the starting history so its last 30 days have the requested vol
+            if isinstance(start_vol, str):
+                start_vol = float(self.rv_quantiles[["calm", "normal", "stressed"].index(start_vol)])
+            past_season = self.season[hour_of_week(idx[0] - pd.to_timedelta(np.arange(720, 0, -1), "h"))]
+            rv = np.sqrt(HOURS_YEAR * np.mean((past_season * hist[H - 720:H]) ** 2))
+            hist[:H] *= start_vol / rv
         x2 = hist * hist
         sums = np.array([x2[H - k:H].sum() for k in comps])
-        b, w, g = self.b, self.w, self.g
+        b, g = self.b, self.g
         a_oi, b1, b2, phi, kap = self.oi_beta
         fb = self.fund_beta
-        season_t = self.season[how]
         settle = (idx.hour % 8 == 0)
         sig = np.empty(n_hours)
         r = np.empty(n_hours)
@@ -302,9 +372,12 @@ class StructuralModel:
         loi[0] = np.log(oi0 or self.oi0)
         prev_doi = 0.0
         Ph = list(self.P_hist[-21:])
+        if funding0 is not None:
+            Ph = [premium_from_funding(funding0)] * 21
         cur_f = float(funding_from_premium(Ph[-1]))
         fund = np.empty(n_hours)
         fres = self.fund_resid[rng.integers(0, len(self.fund_resid), n_hours // 8 + 2)]
+        f_pers = 1.0 - fb[1] - fb[2]  # intercept shift that moves the long-run premium by funding_shift
         kf = 0
         for t in range(n_hours):
             if settle[t]:  # settlement at the open of bar t, from price/OI information up to now
@@ -313,20 +386,32 @@ class StructuralModel:
                 R168 = lcum[t] - lcum[max(t - 168, 0)]
                 R720 = lcum[t] - lcum[max(t - 720, 0)]
                 dOI = loi[t] - loi[max(t - 24, 0)]
-                Pk = (fb[0] + fb[1] * Ph[-1] + fb[2] * np.mean(Ph[-21:]) + fb[3] * R8 + fb[4] * R72
-                      + fb[5] * R168 + fb[6] * R720 + fb[7] * dOI + fres[kf])
+                Pk = (fb[0] + f_pers * fshift[t] + fb[1] * Ph[-1] + fb[2] * np.mean(Ph[-21:]) + fb[3] * R8
+                      + fb[4] * R72 + fb[5] * R168 + fb[6] * R720 + fb[7] * dOI + fres[kf])
                 kf += 1
                 Ph.append(Pk)
                 cur_f = float(funding_from_premium(Pk))
             fund[t] = cur_f
+            fdev = cur_f - self.f_mean - fshift[t]  # feedback acts on deviations from the scenario level
             i = H + t
-            s = np.sqrt(w + np.dot(b, sums / comps) + g * min(hist[i - 1], 0.0) ** 2)
-            xi = s * Z[t]
-            hist[i] = xi
-            x2[i] = xi * xi
+            s0 = np.sqrt(w_t[t] + np.dot(b, sums / comps) + g * min(hist[i - 1], 0.0) ** 2)
+            s = mult[t] * s0
+            if np.isfinite(forced[t]):
+                # forced bar: the price moves exactly as requested, but the shock the other layers and the
+                # cascade see is capped at JUMP_Z (real crash bars: |z| ~ 7-8; the linear cascade and volume
+                # equations extrapolated to |z| ~ 40 give a second crash and 600x volume, unlike real data)
+                zf = (forced[t] - mu_t[t] - self.delta * fdev) / (season_t[t] * s)
+                Z[t] = np.clip(zf, -JUMP_Z, JUMP_Z)
+                xi = s * zf
+            else:
+                xi = s * Z[t]
+            # the cascade sees the shock at the un-multiplied scale: vol_mult is a transient overlay (feeding
+            # it back is explosive, the cascade's persistence is ~1)
+            hist[i] = s0 * Z[t]
+            x2[i] = hist[i] * hist[i]
             sums += x2[i] - x2[i - comps]
             sig[t] = s
-            rt = self.mu + self.delta * (cur_f - self.f_mean) + season_t[t] * xi
+            rt = mu_t[t] + self.delta * fdev + season_t[t] * xi
             r[t] = rt
             lcum[t + 1] = lcum[t] + rt
             dl = a_oi + b1 * rt + b2 * abs(rt) + phi * prev_doi + kap * (loi[t] - self.oi_mean) + EOI[t]
@@ -351,7 +436,7 @@ class StructuralModel:
             m168 = (csum[i] - csum[i - 168]) / 168
             eta[i] = e0 + e1 * m1 + e24 * m24 + e168 * m168 + EV[t]
             csum[i + 1] = csum[i] + eta[i]
-        lv = self.season_lv[how] + c0 + c1 * np.log(sig) + c2 * np.abs(Z) + c3 * Z + eta[168:]
+        lv =self.season_lv[how] + c0 + c1 * np.log(sig) + c2 * np.abs(Z) + c3 * Z + eta[168:]
         vol = np.exp(lv)
         tb = 1 / (1 + np.exp(-(self.tb_beta[0] + self.tb_beta[1] * Z + ETB)))
         # ---- 2. intrabar (needs the volume activity)
@@ -384,6 +469,30 @@ class StructuralModel:
                 "fit": self.fit_info, "season_hour_of_week": self.season.round(4).tolist()}
 
     def save(self, name="structural.json"):
+        """Human-readable parameter summary (not enough to generate; see save_state)."""
         os.makedirs(PARAMS_DIR, exist_ok=True)
         with open(os.path.join(PARAMS_DIR, name), "w") as f:
             json.dump(self.params(), f, indent=1)
+
+    def save_state(self, path=None):
+        """Everything generate() needs (parameters + residual tables), so a fitted model can be reloaded
+        without refitting. Contains residuals derived from the real data: kept out of git like data/cache."""
+        path = path or os.path.join(PARAMS_DIR, STATE_FILE)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        header = {k: getattr(self, k) for k in _STATE_SCALARS}
+        header["components"] = list(self.components)
+        np.savez_compressed(path, header=np.array(json.dumps(header, default=float)),
+                            **{k: np.asarray(getattr(self, k), float) for k in _STATE_ARRAYS})
+        return path
+
+    @classmethod
+    def load(cls, path=None):
+        path = path or os.path.join(PARAMS_DIR, STATE_FILE)
+        with np.load(path, allow_pickle=False) as z:
+            header = json.loads(str(z["header"]))
+            m = cls(components=header.pop("components"), resid_block=header["resid_block"])
+            for k in _STATE_ARRAYS:
+                setattr(m, k, z[k])
+        for k, v in header.items():
+            setattr(m, k, v)
+        return m

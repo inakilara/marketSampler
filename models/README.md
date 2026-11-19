@@ -78,12 +78,32 @@ Lessons from fitting (kept in code comments):
 
 Usage:
 ```python
-import sys; sys.path[:0] = [".", "validation"]
-import panel, models
-m = models.get("structural").fit(panel.load_real())      # ~2.5 min (intrabar calibration)
+import models
+m = models.load("structural")            # saved state (0.2 s); fits on data/cache and saves it if missing (~1.5 min)
+m = models.load("structural", refit=True) # after refreshing the data
 path = m.generate(24 * 365, seed=42, start="2027-01-01")  # DataFrame: open high low close volume taker_buy_volume oi funding
 ```
-`python validation/compare.py --model structural` re-scores; `python models/plot_sample.py` plots paths.
+The fitted state is `models/params/structural_state.npz` (gitignored: it holds residuals derived from the data);
+`models/params/structural.json` is a readable parameter summary.
+
+### Scenarios (keyword arguments of `generate`; "path" = scalar or one value per hour)
+
+| argument | effect | checked (8 seeds × 1 y, medians) |
+|---|---|---|
+| `vol_level` (path) | long-run annualised vol (variance target); also rescales the starting history. A path is a slow regime change: the cascade moves to the new level over months | 0.30 / baseline / 0.80 → yearly vol 0.23 / 0.39 / 0.62; step 0.4→1.0 reaches ~0.78 after 6 months |
+| `start_vol` | vol of the last 30 days before the start; `"calm"` / `"normal"` / `"stressed"` = 10/50/90th pct of real 30-day vol (0.32 / 0.46 / 0.67) | first month 0.32 / 0.41 / 0.56 (mean reversion inside the month) |
+| `vol_mult` (path) | transient multiplier on conditional vol (not fed back to the cascade, which would be explosive) | ×2.5 for 2 weeks: 0.36 → 0.82 → 0.31 after |
+| `drift` (path) | annualised log drift | ±0.5 → log return +0.39 / −0.42 |
+| `jumps` | `{hour or timestamp: log return}` forced bars; the shock passed to volume / OI / range / vol cascade is capped at 8σ (real crash bars ~7–8σ) | −15 %: volume 36× prior day (real big bars 2–40×), OI −6.5 %, next-week vol ×1.45 (real 1.1–2×) |
+| `funding_shift` (path) | shift of the long-run latent funding premium per 8 h; the funding→return feedback acts on deviations from the shifted level | +3e-4 → mean funding 2.9e-4 (baseline 0.6e-4) |
+| `funding0`, `p0`, `oi0` | starting funding rate, price, open interest | funding0 = 5e-4 → 4.2e-4 over the first 3 days |
+
+Note `vol_level` is the unconditional level; because vol is long-memory and right-skewed, the median single year
+realises ~0.77 of it (same as real: pooled 0.50, typical year lower).
+
+`python validation/compare.py --model structural [--refit]` re-scores; `python models/plot_sample.py` plots paths;
+`python models/plot_scenarios.py` plots every scenario against the baseline
+(`validation/reports/structural/figures/scenarios.png`).
 
 ## Implementation plan
 

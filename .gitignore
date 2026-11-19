@@ -1,6 +1,8 @@
 # downloaded market data (re-create with data/fetch_binance.py)
 data/cache/*
 !data/cache/.gitkeep
+# fitted model state (contains residuals derived from the data; re-create with models.load(..., refit=True))
+models/params/*.npz
 
 __pycache__/
 *.pyc

@@ -1,7 +1,7 @@
 # structural vs real fingerprint
 
 3 synthetic paths × 42787 hours, cut into 1-year chunks; status = synthetic chunk median vs real per-year [min, max].
-Fit + generation + characterisation: 231 s.
+Fit + generation + characterisation: 55 s.
 
 **Overall: 96 PASS, 14 NEAR, 0 FAIL out of 110 graded facts.**
 

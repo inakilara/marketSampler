@@ -162,10 +162,10 @@ def write_summary(tab, model, n_paths, n_hours, path, secs):
     open(path, "w", encoding="utf-8").write("\n".join(L) + "\n")
 
 
-def run(model_name, n_paths=3, groups=None, seed0=0):
+def run(model_name, n_paths=3, groups=None, seed0=0, refit=False):
     t0 = time.time()
     real_p = panel_mod.load_real()
-    m = models.get(model_name).fit(real_p)
+    m = models.load(model_name, refit=refit, panel=real_p)
     n = len(real_p)
     paths = [m.generate(n, seed=seed0 + k) for k in range(n_paths)]
     groups = groups or NO_OPTIONS
@@ -187,8 +187,9 @@ if __name__ == "__main__":
     ap.add_argument("--paths", type=int, default=3)
     ap.add_argument("--groups", help="comma-separated fact groups (default: all except options)")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--refit", action="store_true", help="refit instead of loading the saved model state")
     a = ap.parse_args()
-    tab, _ = run(a.model, a.paths, a.groups.split(",") if a.groups else None, a.seed)
+    tab, _ = run(a.model, a.paths, a.groups.split(",") if a.groups else None, a.seed, a.refit)
     g = tab[tab.status.isin(["PASS", "NEAR", "FAIL"])]
     print(g.groupby("group").status.value_counts().unstack(fill_value=0).to_string())
     print("written to", os.path.join(HERE, "reports", a.model))

@@ -23,9 +23,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="structural")
     ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2])
+    ap.add_argument("--refit", action="store_true")
     a = ap.parse_args()
     real = panel.load_real()
-    m = models.get(a.model).fit(real)
+    m = models.load(a.model, refit=a.refit, panel=real)
     paths = [("real", real)] + [("synthetic seed %d" % s, m.generate(len(real), seed=s, start=str(real.index[0].date())))
                                 for s in a.seeds]
     rows = [("close", "price (log)", lambda p: p["close"], True),
