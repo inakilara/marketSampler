@@ -1,0 +1,57 @@
+{
+ "name": "all",
+ "description": "fitted on the whole history",
+ "period": {
+  "start": "2022-01-01 00:00:00+00:00",
+  "end": "2026-11-18 18:00:00+00:00",
+  "n_hours": 42787
+ },
+ "built": "2026-11-19 06:57 UTC",
+ "code_commit": "816889e",
+ "fit_seconds": 70.4,
+ "structural": {
+  "annual_vol_unconditional": 0.5067,
+  "persistence": 0.95544,
+  "start_vol_presets_calm_normal_stressed": [
+   0.3176,
+   0.4595,
+   0.6735
+  ],
+  "start_price": 63142.6,
+  "start_oi": 95898.505,
+  "funding_censored_share": 0.2795
+ },
+ "check": {
+  "real": {
+   "ann_vol": 0.5004483840878579,
+   "hourly_exkurt": 13.845353578120942,
+   "acf_absr_1h": 0.28198699414514766,
+   "log_return_per_year": 0.062021820249754306,
+   "volume_median": 7603.736999999999,
+   "oi_change_per_year": 0.05089654298130433,
+   "funding_mean": 5.993823331463826e-05,
+   "funding_share_at_base": 0.2796784445690783,
+   "atm30_mean": 0.5067267236617055,
+   "vrp30_mean": 0.029238147703454963,
+   "rr25_30d_mean": -0.022890676263929034,
+   "bf25_30d_mean": 0.016475417483210235,
+   "term_slope_7_90_mean": -0.039148652429884155
+  },
+  "synthetic_median_3_paths": {
+   "ann_vol": 0.41612832157521024,
+   "hourly_exkurt": 33.50343114911658,
+   "acf_absr_1h": 0.2886778178753906,
+   "log_return_per_year": 0.23736386390829636,
+   "volume_median": 5745.89403131474,
+   "oi_change_per_year": 0.05637663032726202,
+   "funding_mean": 5.757496556418956e-05,
+   "funding_share_at_base": 0.3322116283417461,
+   "atm30_mean": 0.4339564314942003,
+   "vrp30_mean": 0.03007388013987985,
+   "rr25_30d_mean": -0.008582271289615724,
+   "bf25_30d_mean": 0.014772645587504579,
+   "term_slope_7_90_mean": -0.034092989036419954
+  }
+ },
+ "usage": "models.load_card('all').generate(n_hours, seed=..., start=...)"
+}

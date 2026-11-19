@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 from models.common import stationary_bootstrap_indices
+from models.structural import _compact
 
 TENORS = (7, 14, 30, 60, 90, 180)
 QUANTS = ("atm", "rr25", "bf25", "rr10", "bf10")
@@ -290,8 +291,8 @@ class OptionsLayer:
         path = path or os.path.join(PARAMS_DIR, STATE_FILE)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         np.savez_compressed(path, header=np.array(json.dumps({"fit_info": self.fit_info, "abs_rb_mean": self.abs_rb_mean})),
-                            **{k: getattr(self, k) for k in self._ARRAYS})
-        with open(os.path.join(PARAMS_DIR, "options.json"), "w") as f:
+                            **{k: _compact(getattr(self, k)) for k in self._ARRAYS})
+        with open(os.path.join(os.path.dirname(path), "options.json"), "w") as f:
             json.dump({"series": SERIES, "features": list(FEATURES), "fit": self.fit_info,
                        "beta": {s: dict(zip(FEATURES, np.round(self.beta[j], 5).tolist())) for j, s in enumerate(SERIES)}},
                       f, indent=1)
@@ -303,7 +304,7 @@ class OptionsLayer:
         m = cls()
         with np.load(path, allow_pickle=False) as z:
             for k in cls._ARRAYS:
-                setattr(m, k, z[k])
+                setattr(m, k, z[k].astype(float))
             h = json.loads(str(z["header"]))
         m.fit_info, m.abs_rb_mean = h["fit_info"], h["abs_rb_mean"]
         return m

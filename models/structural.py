@@ -11,14 +11,14 @@ Layers (each conditioned on the ones above; all fitted on the real panel by fit(
      step scale kappa * s * sigma_t / sqrt(12); high/low = path extremes. kappa is calibrated so the
      Parkinson / close-to-close variance ratio matches the real one.
 3. Volume: log V_t = season_v(how) + a + c1 log(s sigma_t) + c2 |z_t| + c3 z_t + eta_t,
-     eta_t HAR(1h, 1d, 1w) — persistent volume level. Taker-buy share: logit = d0 + d1 z_t + e_t.
+     eta_t HAR(1h, 1d, 1w) â€” persistent volume level. Taker-buy share: logit = d0 + d1 z_t + e_t.
 4. Open interest: dlogOI_t = a + b1 r_t + b2 |r_t| + phi dlogOI_{t-1} - kappa_oi (logOI_t - m) + e_t
      (positive coupling with returns, drops in large moves = liquidations, slow mean reversion of the level).
 5. Funding (every 8 h) through a one-sided dead band on a latent rate L, I = 0.01 %, c = 0.01 %:
      F = L below I, F = I for I <= L <= I + c (real point mass ~28 %), F = L - c above (bull phases).
      L_k = a + phi1 L_{k-1} + phi2 mean(L_{k-1..k-21}) + psi (R8, R72, R168, R720) + psi_oi dlogOI_24h + e_k
-     (persistent, follows trailing returns over 8 h…30 d and OI). Stochastic-EM fit of the censored L.
-     Funding feeds back weakly and negatively on the next returns (drift delta * (F - mean F)).
+     (persistent, follows trailing returns over 8 hâ€¦30 d and OI). Stochastic-EM fit of the censored L.
+     Funding feeds back weakly and negatively on the next returns (drift delta * (F - trailing 30-day mean F)).
 
 Innovations: filtered historical simulation. The residuals of layers 1, 3 and 4 for the same real hour are
 resampled together (stationary bootstrap, mean block 24 h), so same-bar cross-dependence and empirical tails
@@ -54,6 +54,12 @@ T_DF = 6.0
 # simulation (share pinned at the base: c=5e-5 0.18, 1e-4 0.29, 2e-4 0.41, 5e-4 0.55; real 0.28)
 FUND_I, FUND_C = 1e-4, 1e-4
 HOURS_YEAR = 8766
+# cap on the funding persistence (L_lag + L_mean21 coefficients). Fitted on one calendar year the free estimate can
+# exceed 1 (2023: 1.005): funding then trends without bound in a bull path and, through the negative funding ->
+# return feedback, turns the drift negative (synthetic 2023 -87 %/y vs real +94 %). At 0.98 the 2023 card still ran
+# funding at 3x the real level; 0.95 gives 1.2-1.5e-4 (real 0.7e-4). Whole history: 0.925, below the cap.
+FUND_PERS_MAX = 0.95
+FUND_FB_H = 720  # trailing window (hours) of the funding level the return feedback is measured against
 JUMP_Z = 8.0  # cap on the shock a forced jump passes to volume / OI / intrabar / the volatility cascade
 STATE_FILE = "structural_state.npz"
 # fitted attributes stored by save_state(): arrays go to the npz, scalars/lists to a JSON header
@@ -61,6 +67,12 @@ _STATE_ARRAYS = ("season", "x_hist", "season_lv", "vol_beta", "eta_beta", "eta_h
                  "fund_beta", "fund_resid", "P_hist", "b", "rv_quantiles")
 _STATE_SCALARS = ("mu", "p0", "oi_mean", "oi0", "f_mean", "delta", "w", "w_qml", "g", "persistence", "x_var",
                   "kappa", "theta", "iscale_norm", "intrabar_fit", "fit_info", "data_end", "resid_block")
+
+
+def _compact(a):
+    """Large tables (resampled residuals, histories) as float32 to halve file size; parameters stay float64."""
+    a = np.asarray(a, float)
+    return a.astype(np.float32) if a.size > 10000 else a
 
 
 def _as_path(v, n, name):
@@ -207,8 +219,12 @@ class StructuralModel:
         self._fit_funding(P, r, idx, loi)
         fcur = P["funding"].values
         self.f_mean = float(np.nanmean(fcur))
-        okf = np.isfinite(fcur)
-        self.delta = float(np.polyfit(fcur[okf] - self.f_mean, r[okf], 1)[0])
+        # feedback on deviations from the trailing 30-day funding mean (spikes predict weaker returns). Against the
+        # fixed sample mean, any path whose funding level runs higher (a bull scenario, funding_shift, a one-year
+        # fit) got a permanent negative drift (2023 card: -87 %/y vs real +94 %).
+        fbar = pd.Series(fcur).rolling(FUND_FB_H, min_periods=24).mean().shift(1).values
+        okf = np.isfinite(fcur) & np.isfinite(fbar)
+        self.delta = float(np.polyfit(fcur[okf] - fbar[okf], r[okf], 1)[0])
         self.fit_info.update({"kappa": self.kappa, "theta": self.theta, "parkinson_target": float(target),
                               "intrabar_fit": self.intrabar_fit, "n_joint_resid": int(keep.sum())})
         return self
@@ -300,6 +316,14 @@ class StructuralModel:
         for it in range(40):  # stochastic EM: censored premia redrawn from the model, truncated to the band
             X = np.column_stack([np.ones(len(Pl)), np.r_[np.nan, Pl[:-1]], lagged_mean(Pl, 21), D])
             beta, res = ols(Pl, X)
+            if beta[1] + beta[2] > FUND_PERS_MAX:
+                # impose b1 + b2 = FUND_PERS_MAX: y - c*M = b1 (L - M) + others (substituting b2 = c - b1)
+                Xc = X.copy()
+                Xc[:, 1] = X[:, 1] - X[:, 2]
+                yc = Pl - FUND_PERS_MAX * X[:, 2]
+                bc, _ = ols(yc, np.delete(Xc, 2, axis=1))
+                beta = np.r_[bc[:2], FUND_PERS_MAX - bc[1], bc[2:]]
+                res = Pl - X @ beta
             pred = X @ beta
             unc = np.isfinite(res) & ~cens
             pool = res[unc] - res[unc].mean()
@@ -380,6 +404,8 @@ class StructuralModel:
         fund = np.empty(n_hours)
         fres = self.fund_resid[rng.integers(0, len(self.fund_resid), n_hours // 8 + 2)]
         f_pers = 1.0 - fb[1] - fb[2]  # intercept shift that moves the long-run premium by funding_shift
+        fsum = self.f_mean * FUND_FB_H  # running sum of the last FUND_FB_H hourly funding values (feedback reference)
+        fbuf = np.full(FUND_FB_H, self.f_mean)
         kf = 0
         for t in range(n_hours):
             if settle[t]:  # settlement at the open of bar t, from price/OI information up to now
@@ -394,7 +420,9 @@ class StructuralModel:
                 Ph.append(Pk)
                 cur_f = float(funding_from_premium(Pk))
             fund[t] = cur_f
-            fdev = cur_f - self.f_mean - fshift[t]  # feedback acts on deviations from the scenario level
+            fdev = cur_f - fsum / FUND_FB_H  # feedback acts on deviations from the trailing 30-day level
+            fsum += cur_f - fbuf[t % FUND_FB_H]
+            fbuf[t % FUND_FB_H] = cur_f
             i = H + t
             s0 = np.sqrt(w_t[t] + np.dot(b, sums / comps) + g * min(hist[i - 1], 0.0) ** 2)
             s = mult[t] * s0
@@ -470,10 +498,10 @@ class StructuralModel:
                 "funding_feedback_delta": self.delta, "funding_mean": self.f_mean,
                 "fit": self.fit_info, "season_hour_of_week": self.season.round(4).tolist()}
 
-    def save(self, name="structural.json"):
+    def save(self, name="structural.json", directory=PARAMS_DIR):
         """Human-readable parameter summary (not enough to generate; see save_state)."""
-        os.makedirs(PARAMS_DIR, exist_ok=True)
-        with open(os.path.join(PARAMS_DIR, name), "w") as f:
+        os.makedirs(directory, exist_ok=True)
+        with open(os.path.join(directory, name), "w") as f:
             json.dump(self.params(), f, indent=1)
 
     def save_state(self, path=None):
@@ -484,7 +512,7 @@ class StructuralModel:
         header = {k: getattr(self, k) for k in _STATE_SCALARS}
         header["components"] = list(self.components)
         np.savez_compressed(path, header=np.array(json.dumps(header, default=float)),
-                            **{k: np.asarray(getattr(self, k), float) for k in _STATE_ARRAYS})
+                            **{k: _compact(getattr(self, k)) for k in _STATE_ARRAYS})
         return path
 
     @classmethod
@@ -494,7 +522,7 @@ class StructuralModel:
             header = json.loads(str(z["header"]))
             m = cls(components=header.pop("components"), resid_block=header["resid_block"])
             for k in _STATE_ARRAYS:
-                setattr(m, k, z[k])
+                setattr(m, k, z[k].astype(float))
         for k, v in header.items():
             setattr(m, k, v)
         return m

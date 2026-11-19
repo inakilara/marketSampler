@@ -26,9 +26,13 @@
       funding0) and `models.load()` with a saved state (0.2 s instead of refitting); baseline unchanged 96/14/0
 - [ ] optional hidden-regime layer for the remaining NEARs (calm typical year, short funding bull episodes)
 - [x] options layer (`models/options.py`): hourly ATM / RR / BF surface at 7–180 d driven by the price path;
-      `models.load("structural+options")` = joint generator; 130 PASS / 20 NEAR / 1 FAIL of 151 facts
+      `models.load("structural+options")` = joint generator; 129 PASS / 21 NEAR / 1 FAIL of 151 facts
 - [ ] options gaps: crash-time term-structure inversions too mild; same-hour dATM–dBF correlation (FAIL, mostly
       reconstruction artefact); BF10 downtrend not reproduced
+
+- [x] `cards/`: pre-built fitted models (whole history + each calendar year), `models.load_card(name)`;
+      funding persistence capped at 0.95 and funding→return feedback measured against the trailing 30-day level
+      (one-year fits otherwise turned bull years into crashes)
 
 ## Later
 - [x] Joint synthetic generator (OHLCV + funding + OI + IV surface state)

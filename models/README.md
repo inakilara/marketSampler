@@ -95,7 +95,7 @@ The fitted state is `models/params/structural_state.npz` (gitignored: it holds r
 | `vol_mult` (path) | transient multiplier on conditional vol (not fed back to the cascade, which would be explosive) | ×2.5 for 2 weeks: 0.36 → 0.82 → 0.31 after |
 | `drift` (path) | annualised log drift | ±0.5 → log return +0.39 / −0.42 |
 | `jumps` | `{hour or timestamp: log return}` forced bars; the shock passed to volume / OI / range / vol cascade is capped at 8σ (real crash bars ~7–8σ) | −15 %: volume 36× prior day (real big bars 2–40×), OI −6.5 %, next-week vol ×1.45 (real 1.1–2×) |
-| `funding_shift` (path) | shift of the long-run latent funding premium per 8 h; the funding→return feedback acts on deviations from the shifted level | +3e-4 → mean funding 2.9e-4 (baseline 0.6e-4) |
+| `funding_shift` (path) | shift of the long-run latent funding premium per 8 h; the funding→return feedback acts on deviations from the trailing 30-day funding level, so a sustained shift does not change the drift | +3e-4 → mean funding 2.9e-4 (baseline 0.6e-4) |
 | `funding0`, `p0`, `oi0` | starting funding rate, price, open interest | funding0 = 5e-4 → 4.2e-4 over the first 3 days |
 
 Note `vol_level` is the unconditional level; because vol is long-memory and right-skewed, the median single year
@@ -129,8 +129,8 @@ Per series (log ATM; RR/ATM and BF/ATM; 30d modelled directly, other tenors as s
 Shocks are resampled jointly across the 30 series from real residual rows (slow: daily rows; medium + noise:
 the same real hour), so tenors and quantities co-move as in the data.
 
-Score (`python validation/compare.py --model structural+options`, all 151 facts): **130 PASS, 20 NEAR, 1 FAIL**;
-options 19 / 4 / 0, the OHLCV / funding / OI part unchanged. Checked by hand: driven by the *real* price path the
+Score (`python validation/compare.py --model structural+options`, all 151 facts): **129 PASS, 21 NEAR, 1 FAIL**;
+options 18 / 5 / 0, the OHLCV / funding / OI part unchanged. Checked by hand: driven by the *real* price path the
 layer reproduces the real options facts (ATM30 mean 0.50 vs 0.51, VRP +2.4 vs +2.9 vol, RR25 beta 0.49 vs 0.48,
 ATM30 daily ACF at 30 d 0.63 vs 0.73); no calendar-arbitrage violations; negative BF25 2.2 % of hours (real
 reconstruction 1.1 %). `python models/plot_options.py` → `validation/reports/structural+options/figures/surface_paths.png`.

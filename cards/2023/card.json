@@ -1,0 +1,57 @@
+{
+ "name": "2023",
+ "description": "fitted on calendar year 2023 only",
+ "period": {
+  "start": "2023-01-01 00:00:00+00:00",
+  "end": "2023-12-31 23:00:00+00:00",
+  "n_hours": 8760
+ },
+ "built": "2026-11-19 06:58 UTC",
+ "code_commit": "816889e",
+ "fit_seconds": 13.2,
+ "structural": {
+  "annual_vol_unconditional": 0.4236,
+  "persistence": 0.70647,
+  "start_vol_presets_calm_normal_stressed": [
+   0.3082,
+   0.4062,
+   0.5253
+  ],
+  "start_price": 42314.0,
+  "start_oi": 74276.263,
+  "funding_censored_share": 0.3848
+ },
+ "check": {
+  "real": {
+   "ann_vol": 0.42782329822908677,
+   "hourly_exkurt": 26.5132911143052,
+   "acf_absr_1h": 0.23793916216556443,
+   "log_return_per_year": 0.9408739186854393,
+   "volume_median": 10515.298999999999,
+   "oi_change_per_year": -0.3529865469475472,
+   "funding_mean": 7.183298630136987e-05,
+   "funding_share_at_base": 0.38538812785388127,
+   "atm30_mean": 0.4616697302024305,
+   "vrp30_mean": 0.03623027979515668,
+   "rr25_30d_mean": 0.012262845787079101,
+   "bf25_30d_mean": 0.022187846385898193,
+   "term_slope_7_90_mean": -0.05531715170407518
+  },
+  "synthetic_median_3_paths": {
+   "ann_vol": 0.3964642104317918,
+   "hourly_exkurt": 34.196188773913214,
+   "acf_absr_1h": 0.19078595199238163,
+   "log_return_per_year": 1.1261088301861595,
+   "volume_median": 9506.353570677693,
+   "oi_change_per_year": 0.3762778494031174,
+   "funding_mean": 0.00013291661799039615,
+   "funding_share_at_base": 0.3872146118721461,
+   "atm30_mean": 0.46605828217923906,
+   "vrp30_mean": 0.06338928049714865,
+   "rr25_30d_mean": 0.017378943952298703,
+   "bf25_30d_mean": 0.021070315872997136,
+   "term_slope_7_90_mean": -0.07458860879987576
+  }
+ },
+ "usage": "models.load_card('2023').generate(n_hours, seed=..., start=...)"
+}
