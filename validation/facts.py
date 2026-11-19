@@ -287,12 +287,18 @@ def funding(p):
     r = log_returns(p)
     lc = np.log(p["close"])
     fwd = {h: (lc.shift(-h) - lc).reindex(f8.index) for h in (8, 24, 72)}
-    back = {h: (lc - lc.shift(h)).reindex(f8.index) for h in (8, 24, 72, 168)}
+    back = {h: (lc - lc.shift(h)).reindex(f8.index) for h in (8, 24, 72, 168, 720)}
     a = acf(f8, 90)
     sc = {"funding_mean": float(f8.mean()), "funding_std": float(f8.std()),
           "funding_ann_mean": float(f8.mean() * 3 * 365.25),
           "funding_share_negative": float((f8 < 0).mean()),
           "funding_q99": float(f8.quantile(0.99)), "funding_q01": float(f8.quantile(0.01)),
+          "funding_q05": float(f8.quantile(0.05)), "funding_q25": float(f8.quantile(0.25)),
+          "funding_q50": float(f8.quantile(0.50)), "funding_q75": float(f8.quantile(0.75)),
+          "funding_q95": float(f8.quantile(0.95)),
+          # Binance pins funding at the 0.01 % base rate when the premium is small: a point mass
+          "funding_share_at_base": float(np.isclose(f8, 1e-4, atol=1e-9).mean()),
+          "funding_share_above_base": float((f8 > 1e-4 + 1e-9).mean()),
           "acf_funding_1settle": float(a[1]), "acf_funding_3settle": float(a[3]), "acf_funding_21settle": float(a[21])}
     for h, x in back.items():
         sc["corr_funding_trailing_r_%dh" % h] = _corr(f8, x)
